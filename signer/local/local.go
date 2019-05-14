@@ -155,9 +155,16 @@ func PopulateSubjectFromCSR(s *signer.Subject, req pkix.Name) pkix.Name {
 	replaceSliceIfEmpty(&name.Locality, &req.Locality)
 	replaceSliceIfEmpty(&name.Organization, &req.Organization)
 	replaceSliceIfEmpty(&name.OrganizationalUnit, &req.OrganizationalUnit)
+
+	// Any extra attributes
+	if len(name.ExtraNames) == 0 {
+		name.ExtraNames = req.Names
+	}
+
 	if name.SerialNumber == "" {
 		name.SerialNumber = req.SerialNumber
 	}
+
 	return name
 }
 
@@ -340,6 +347,7 @@ func (s *Signer) Sign(req signer.SignRequest) (cert []byte, err error) {
 	}
 
 	var distPoints = safeTemplate.CRLDistributionPoints
+
 	err = signer.FillTemplate(&safeTemplate, s.policy.Default, profile, req.NotBefore, req.NotAfter)
 	if err != nil {
 		return nil, err
@@ -480,17 +488,17 @@ func (s *Signer) SignFromPrecert(precert *x509.Certificate, scts []ct.SignedCert
 	// Create the new tbsCert from precert. Do explicit copies of any slices so that we don't
 	// use memory that may be altered by us or the caller at a later stage.
 	tbsCert := x509.Certificate{
-		SignatureAlgorithm:          precert.SignatureAlgorithm,
-		PublicKeyAlgorithm:          precert.PublicKeyAlgorithm,
-		PublicKey:                   precert.PublicKey,
-		Version:                     precert.Version,
-		SerialNumber:                precert.SerialNumber,
-		Issuer:                      precert.Issuer,
-		Subject:                     precert.Subject,
-		NotBefore:                   precert.NotBefore,
-		NotAfter:                    precert.NotAfter,
-		KeyUsage:                    precert.KeyUsage,
-		BasicConstraintsValid:       precert.BasicConstraintsValid,
+		SignatureAlgorithm:    precert.SignatureAlgorithm,
+		PublicKeyAlgorithm:    precert.PublicKeyAlgorithm,
+		PublicKey:             precert.PublicKey,
+		Version:               precert.Version,
+		SerialNumber:          precert.SerialNumber,
+		Issuer:                precert.Issuer,
+		Subject:               precert.Subject,
+		NotBefore:             precert.NotBefore,
+		NotAfter:              precert.NotAfter,
+		KeyUsage:              precert.KeyUsage,
+		BasicConstraintsValid: precert.BasicConstraintsValid,
 		IsCA:                        precert.IsCA,
 		MaxPathLen:                  precert.MaxPathLen,
 		MaxPathLenZero:              precert.MaxPathLenZero,

@@ -17,6 +17,8 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"regexp"
+	"strconv"
 
 	"github.com/google/certificate-transparency-go"
 	cttls "github.com/google/certificate-transparency-go/tls"
@@ -587,4 +589,27 @@ func ReadBytes(valFile string) ([]byte, error) {
 		return nil, fmt.Errorf("multiple prefixes: %s",
 			strings.Join(splitVal[:len(splitVal)-1], ", "))
 	}
+}
+
+// ParseObjectIdentifier parsed an OID formated string.
+// If the value does not correspond to the format of OID strings an error is returned
+func ParseObjectIdentifier(oidString string) (oid asn1.ObjectIdentifier, err error) {
+	validOID, err := regexp.MatchString("\\d(\\.\\d+)*", oidString)
+	if err != nil {
+		return
+	}
+	if !validOID {
+		err = errors.New("Invalid OID")
+		return
+	}
+
+	segments := strings.Split(oidString, ".")
+	oid = make(asn1.ObjectIdentifier, len(segments))
+	for i, intString := range segments {
+		oid[i], err = strconv.Atoi(intString)
+		if err != nil {
+			return
+		}
+	}
+	return
 }

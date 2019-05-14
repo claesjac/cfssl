@@ -36,6 +36,10 @@ type Name struct {
 	O            string // OrganisationName
 	OU           string // OrganisationalUnitName
 	SerialNumber string
+	OID          struct {
+		ID    string `json:"id"`
+		Value string `json:"value"`
+	} `json:"oid"`
 }
 
 // A KeyRequest is a generic request for a new key.
@@ -174,6 +178,19 @@ func (cr *CertificateRequest) Name() pkix.Name {
 		appendIf(n.L, &name.Locality)
 		appendIf(n.O, &name.Organization)
 		appendIf(n.OU, &name.OrganizationalUnit)
+
+		// Custom OID
+		if n.OID.ID != "" && n.OID.Value != "" {
+			oid, err := helpers.ParseObjectIdentifier(n.OID.ID)
+			if err != nil {
+
+			}
+			name.Names = append(name.Names, pkix.AttributeTypeAndValue{
+				Type:  oid,
+				Value: n.OID.Value,
+			})
+
+		}
 	}
 	name.SerialNumber = cr.SerialNumber
 	return name
@@ -295,8 +312,9 @@ func getNames(sub pkix.Name) []Name {
 	nou := len(sub.OrganizationalUnit)
 	nl := len(sub.Locality)
 	np := len(sub.Province)
+	no := len(sub.Names)
 
-	n := max(nc, norg, nou, nl, np)
+	n := max(nc, norg, nou, nl, np, no)
 
 	names := make([]Name, n)
 	for i := range names {
@@ -314,6 +332,12 @@ func getNames(sub pkix.Name) []Name {
 		}
 		if i < np {
 			names[i].ST = sub.Province[i]
+		}
+		if i < no {
+			if v, ok := sub.Names[i].Value.(string); ok {
+				names[i].OID.ID = sub.Names[i].Type.String()
+				names[i].OID.Value = v
+			}
 		}
 	}
 	return names
@@ -346,7 +370,7 @@ func (g *Generator) ProcessRequest(req *CertificateRequest) (csr, key []byte, er
 func IsNameEmpty(n Name) bool {
 	empty := func(s string) bool { return strings.TrimSpace(s) == "" }
 
-	if empty(n.C) && empty(n.ST) && empty(n.L) && empty(n.O) && empty(n.OU) {
+	if empty(n.C) && empty(n.ST) && empty(n.L) && empty(n.O) && empty(n.OU) && empty(n.OID.ID) && empty(n.OID.Value) {
 		return true
 	}
 	return false

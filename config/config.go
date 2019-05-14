@@ -10,8 +10,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"regexp"
-	"strconv"
-	"strings"
 	"time"
 
 	"github.com/cloudflare/cfssl/auth"
@@ -110,7 +108,7 @@ func (oid *OID) UnmarshalJSON(data []byte) (err error) {
 		return errors.New("OID JSON string not wrapped in quotes." + string(data))
 	}
 	data = data[1 : len(data)-1]
-	parsedOid, err := parseObjectIdentifier(string(data))
+	parsedOid, err := helpers.ParseObjectIdentifier(string(data))
 	if err != nil {
 		return err
 	}
@@ -121,27 +119,6 @@ func (oid *OID) UnmarshalJSON(data []byte) (err error) {
 // MarshalJSON marshals an oid into a JSON string.
 func (oid OID) MarshalJSON() ([]byte, error) {
 	return []byte(fmt.Sprintf(`"%v"`, asn1.ObjectIdentifier(oid))), nil
-}
-
-func parseObjectIdentifier(oidString string) (oid asn1.ObjectIdentifier, err error) {
-	validOID, err := regexp.MatchString("\\d(\\.\\d+)*", oidString)
-	if err != nil {
-		return
-	}
-	if !validOID {
-		err = errors.New("Invalid OID")
-		return
-	}
-
-	segments := strings.Split(oidString, ".")
-	oid = make(asn1.ObjectIdentifier, len(segments))
-	for i, intString := range segments {
-		oid[i], err = strconv.Atoi(intString)
-		if err != nil {
-			return
-		}
-	}
-	return
 }
 
 const timeFormat = "2006-01-02T15:04:05"

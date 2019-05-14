@@ -20,7 +20,9 @@ import (
 	"github.com/cloudflare/cfssl/config"
 	"github.com/cloudflare/cfssl/csr"
 	cferr "github.com/cloudflare/cfssl/errors"
+	"github.com/cloudflare/cfssl/helpers"
 	"github.com/cloudflare/cfssl/info"
+	"github.com/cloudflare/cfssl/log"
 )
 
 // Subject contains the information that should be used to override the
@@ -90,6 +92,20 @@ func (s *Subject) Name() pkix.Name {
 		appendIf(n.L, &name.Locality)
 		appendIf(n.O, &name.Organization)
 		appendIf(n.OU, &name.OrganizationalUnit)
+
+		// Custom OID
+		if n.OID.ID != "" && n.OID.Value != "" {
+			oid, err := helpers.ParseObjectIdentifier(n.OID.ID)
+			if err != nil {
+				log.Infof("Invalid OID %s because of %s", s, err)
+				continue
+			}
+
+			name.ExtraNames = append(name.ExtraNames, pkix.AttributeTypeAndValue{
+				Type:  oid,
+				Value: n.OID.Value,
+			})
+		}
 	}
 	name.SerialNumber = s.SerialNumber
 	return name
